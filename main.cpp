@@ -141,7 +141,7 @@ void handleIndex(QHttpServer &httpServer, QHttpServerRequest::Method method,
 }
 
 void handleEco(QHttpServer &httpServer, QHttpServerRequest::Method method,
-               QByteArray path) {
+               const QByteArray &path) {
 
   httpServer.route(
       path, QHttpServerRequest::Method::Post,
@@ -168,13 +168,14 @@ void handleEco(QHttpServer &httpServer, QHttpServerRequest::Method method,
           int val = (v.toInt());
           if (val >= 0 && val < 100) {
 
-              /// Simular delay
-//            if (val % 2 == 0) {
-//              auto delay = 100 + (val * 10);
-//              qDebug() << "pausa de " << delay << "ms";
-//              QThread::msleep(delay);
-//              qDebug() << "respondiendo "<< val << " despues de " << delay << "ms";
-//            }
+            /// Simular delay
+            //            if (val % 2 == 0) {
+            //              auto delay = 100 + (val * 10);
+            //              qDebug() << "pausa de " << delay << "ms";
+            //              QThread::msleep(delay);
+            //              qDebug() << "respondiendo "<< val << " despues de "
+            //              << delay << "ms";
+            //            }
 
             return QHttpServerResponse(parsedDocument.object(),
                                        QHttpServerResponder::StatusCode::Ok);
@@ -197,7 +198,8 @@ void handleEco(QHttpServer &httpServer, QHttpServerRequest::Method method,
       });
 }
 
-void handleVentaUx(QHttpServer &httpServer, QHttpServerRequest::Method method, QByteArray path) {
+void handleVentaUx(QHttpServer &httpServer, QHttpServerRequest::Method method,
+                   const QByteArray &path) {
 
   httpServer.route(path, method, [](const QHttpServerRequest &request) {
     const std::optional<QJsonObject> json =
@@ -206,16 +208,29 @@ void handleVentaUx(QHttpServer &httpServer, QHttpServerRequest::Method method, Q
     if (!json)
       return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
 
+    /*
+    if(ventaUxInputInvalido(json.value()))
     auto malformed = makeErrorResponse(
-        "Solicitud mal formada", "Solicitud contiene datos mal formados", 401);
-    return QHttpServerResponse(malformed,
+        "Solicitud mal formada", "La solicitud contiene datos mal formados",
+    401); return QHttpServerResponse(malformed,
                                QHttpServerResponder::StatusCode::BadRequest);
+    */
 
     /// CONTINUAR ACA
+    auto payload = json.value();
+
+    qDebug().noquote().nospace()
+        << request.url().toDisplayString(QUrl::RemoveQuery) << "\n"
+        << QJsonDocument(payload).toJson(QJsonDocument::JsonFormat::Indented)
+        << "\n";
+
+    return QHttpServerResponse(payload, QHttpServerResponder::StatusCode::Ok);
   });
 }
 
-void handleVentaCredito(QHttpServer &httpServer, QHttpServerRequest::Method method, QByteArray path) {
+void handleVentaCredito(QHttpServer &httpServer,
+                        QHttpServerRequest::Method method,
+                        const QByteArray &path) {
   httpServer.route(path, method, [](const QHttpServerRequest &request) {
     const std::optional<QJsonObject> json =
         byteArrayToJsonObject(request.body());
@@ -229,101 +244,117 @@ void handleVentaCredito(QHttpServer &httpServer, QHttpServerRequest::Method meth
                                QHttpServerResponder::StatusCode::BadRequest);
 
     /// CONTINUAR ACA
+    auto payload = json.value();
+    return QHttpServerResponse(payload, QHttpServerResponder::StatusCode::Ok);
   });
 }
 
 void handleVentaDebito(QHttpServer &httpServer,
                        QHttpServerRequest::Method method, QByteArray path) {
   httpServer.route(path, method, [](const QHttpServerRequest &request) {
-      const std::optional<QJsonObject> json =
-          byteArrayToJsonObject(request.body());
+    const std::optional<QJsonObject> json =
+        byteArrayToJsonObject(request.body());
 
-      if (!json)
-          return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
+    if (!json)
+      return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
 
-      auto malformed = makeErrorResponse(
-          "Solicitud mal formada", "Solicitud contiene datos mal formados", 401);
-      return QHttpServerResponse(malformed,
-                                 QHttpServerResponder::StatusCode::BadRequest);
+    auto malformed = makeErrorResponse(
+        "Solicitud mal formada", "Solicitud contiene datos mal formados", 401);
+    return QHttpServerResponse(malformed,
+                               QHttpServerResponder::StatusCode::BadRequest);
 
-      /// CONTINUAR ACA
+    /// CONTINUAR ACA
+    auto payload = json.value();
+    return QHttpServerResponse(payload, QHttpServerResponder::StatusCode::Ok);
   });
 }
 
 void handleMontoDescuento(QHttpServer &httpServer,
-                          QHttpServerRequest::Method method, QByteArray path) {
+                          QHttpServerRequest::Method method,
+                          const QByteArray &path) {
   httpServer.route(path, method, [](const QHttpServerRequest &request) {
-      const std::optional<QJsonObject> json =
-          byteArrayToJsonObject(request.body());
+    const std::optional<QJsonObject> json =
+        byteArrayToJsonObject(request.body());
 
-      if (!json)
-          return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
+    if (!json)
+      return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
 
-      auto malformed = makeErrorResponse(
-          "Solicitud mal formada", "Solicitud contiene datos mal formados", 401);
-      return QHttpServerResponse(malformed,
-                                 QHttpServerResponder::StatusCode::BadRequest);
+    auto malformed = makeErrorResponse(
+        "Solicitud mal formada", "Solicitud contiene datos mal formados", 401);
+    return QHttpServerResponse(malformed,
+                               QHttpServerResponder::StatusCode::BadRequest);
 
-      /// CONTINUAR ACA
+    /// CONTINUAR ACA
+    auto payload = json.value();
+    return QHttpServerResponse(payload, QHttpServerResponder::StatusCode::Ok);
   });
 }
 
 void handleVentaQr(QHttpServer &httpServer, QHttpServerRequest::Method method,
-                   QByteArray path) {
+                   const QByteArray &path) {
   httpServer.route(path, method, [](const QHttpServerRequest &request) {
-      const std::optional<QJsonObject> json =
-          byteArrayToJsonObject(request.body());
+    const std::optional<QJsonObject> json =
+        byteArrayToJsonObject(request.body());
 
-      if (!json)
-          return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
+    if (!json)
+      return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
 
-      auto malformed = makeErrorResponse(
-          "Solicitud mal formada", "Solicitud contiene datos mal formados", 401);
-      return QHttpServerResponse(malformed,
-                                 QHttpServerResponder::StatusCode::BadRequest);
+    auto malformed = makeErrorResponse(
+        "Solicitud mal formada", "Solicitud contiene datos mal formados", 401);
+    return QHttpServerResponse(malformed,
+                               QHttpServerResponder::StatusCode::BadRequest);
 
-      /// CONTINUAR ACA
+    /// CONTINUAR ACA
+    auto payload = json.value();
+    return QHttpServerResponse(payload, QHttpServerResponder::StatusCode::Ok);
   });
 }
 
 void handleVentaCanje(QHttpServer &httpServer,
-                      QHttpServerRequest::Method method, QByteArray path) {
+                      QHttpServerRequest::Method method,
+                      const QByteArray &path) {
   httpServer.route(path, method, [](const QHttpServerRequest &request) {
-      const std::optional<QJsonObject> json =
-          byteArrayToJsonObject(request.body());
+    const std::optional<QJsonObject> json =
+        byteArrayToJsonObject(request.body());
 
-      if (!json)
-          return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
+    if (!json)
+      return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
 
-      auto malformed = makeErrorResponse(
-          "Solicitud mal formada", "Solicitud contiene datos mal formados", 401);
-      return QHttpServerResponse(malformed,
-                                 QHttpServerResponder::StatusCode::BadRequest);
+    auto malformed = makeErrorResponse(
+        "Solicitud mal formada", "Solicitud contiene datos mal formados", 401);
+    return QHttpServerResponse(malformed,
+                               QHttpServerResponder::StatusCode::BadRequest);
 
-      /// CONTINUAR ACA
+    /// CONTINUAR ACA
+    auto payload = json.value();
+    return QHttpServerResponse(payload, QHttpServerResponder::StatusCode::Ok);
   });
 }
 
 void handleVentaBilletera(QHttpServer &httpServer,
-                          QHttpServerRequest::Method method, QByteArray path) {
+                          QHttpServerRequest::Method method,
+                          const QByteArray &path) {
   httpServer.route(path, method, [](const QHttpServerRequest &request) {
-      const std::optional<QJsonObject> json =
-          byteArrayToJsonObject(request.body());
+    const std::optional<QJsonObject> json =
+        byteArrayToJsonObject(request.body());
 
-      if (!json)
-          return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
+    if (!json)
+      return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
 
-      auto malformed = makeErrorResponse(
-          "Solicitud mal formada", "Solicitud contiene datos mal formados", 401);
-      return QHttpServerResponse(malformed,
-                                 QHttpServerResponder::StatusCode::BadRequest);
+    auto malformed = makeErrorResponse(
+        "Solicitud mal formada", "Solicitud contiene datos mal formados", 401);
+    return QHttpServerResponse(malformed,
+                               QHttpServerResponder::StatusCode::BadRequest);
 
-      /// CONTINUAR ACA
+    /// CONTINUAR ACA
+    auto payload = json.value();
+    return QHttpServerResponse(payload, QHttpServerResponder::StatusCode::Ok);
   });
 }
 
 void handleListarIssuers(QHttpServer &httpServer,
-                         QHttpServerRequest::Method method, QByteArray path) {
+                         QHttpServerRequest::Method method,
+                         const QByteArray &path) {
 
   httpServer.route(path, method, []() {
     QJsonArray lista;
@@ -369,7 +400,7 @@ void handleListarIssuers(QHttpServer &httpServer,
 
 void handleListarBilleteras(QHttpServer &httpServer,
                             QHttpServerRequest::Method method,
-                            QByteArray path) {
+                            const QByteArray &path) {
   httpServer.route(path, method, []() {
     QJsonArray lista;
 
