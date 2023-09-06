@@ -62,75 +62,6 @@ static QJsonObject makeErrorResponse(const QString error, const QString message,
       {"statusCode", statusCode}, {"error", error}, {"message", message}};
 }
 
-void ejemplos(QHttpServer &httpServer) {
-
-  httpServer.route("/", []() { return "Hello world"; });
-
-  httpServer.route("/query", [](const QHttpServerRequest &request) {
-    return host(request) + u"/query/"_s;
-  });
-
-  httpServer.route("/query/", [](qint32 id, const QHttpServerRequest &request) {
-    return u"%1/query/%2"_s.arg(host(request)).arg(id);
-  });
-
-  httpServer.route("/query/<arg>/log",
-                   [](qint32 id, const QHttpServerRequest &request) {
-                     return u"%1/query/%2/log"_s.arg(host(request)).arg(id);
-                   });
-
-  httpServer.route("/query/<arg>/log/", [](qint32 id, float threshold,
-                                           const QHttpServerRequest &request) {
-    return u"%1/query/%2/log/%3"_s.arg(host(request)).arg(id).arg(threshold);
-  });
-
-  httpServer.route("/user/", [](const qint32 id) {
-    return u"User "_s + QString::number(id);
-  });
-
-  httpServer.route("/user/<arg>/detail",
-                   [](const qint32 id) { return u"User %1 detail"_s.arg(id); });
-
-  httpServer.route("/user/<arg>/detail/",
-                   [](const qint32 id, const qint32 year) {
-                     return u"User %1 detail year - %2"_s.arg(id).arg(year);
-                   });
-
-  httpServer.route("/json/", [] {
-    return QJsonObject{{{"key1", "1"}, {"key2", "2"}, {"key3", "3"}}};
-  });
-
-  httpServer.route("/assets/<arg>", [](const QUrl &url) {
-    return QHttpServerResponse::fromFile(u":/assets/"_s + url.path());
-  });
-
-  httpServer.route("/remote_address", [](const QHttpServerRequest &request) {
-    return request.remoteAddress().toString();
-  });
-
-  // Basic authentication example (RFC 7617)
-  httpServer.route("/auth", [](const QHttpServerRequest &request) {
-    auto auth = request.value("authorization").simplified();
-
-    if (auth.size() > 6 && auth.first(6).toLower() == "basic ") {
-      auto token = auth.sliced(6);
-      auto userPass = QByteArray::fromBase64(token);
-
-      if (auto colon = userPass.indexOf(':'); colon > 0) {
-        auto userId = userPass.first(colon);
-        auto password = userPass.sliced(colon + 1);
-
-        if (userId == "dschulz" && password == "dsds")
-          return QHttpServerResponse("text/plain", "Success\n");
-      }
-    }
-    QHttpServerResponse response("text/plain", "Authentication required\n",
-                                 QHttpServerResponse::StatusCode::Unauthorized);
-    response.setHeader("WWW-Authenticate",
-                       R"(Basic realm="SimuladorPOS", charset="UTF-8")");
-    return response;
-  });
-}
 
 void handleIndex(QHttpServer &httpServer, QHttpServerRequest::Method method,
                  QByteArray path) {
@@ -168,14 +99,14 @@ void handleEco(QHttpServer &httpServer, QHttpServerRequest::Method method,
           int val = (v.toInt());
           if (val >= 0 && val < 100) {
 
-            /// Simular delay
-            //            if (val % 2 == 0) {
-            //              auto delay = 100 + (val * 10);
-            //              qDebug() << "pausa de " << delay << "ms";
-            //              QThread::msleep(delay);
-            //              qDebug() << "respondiendo "<< val << " despues de "
-            //              << delay << "ms";
-            //            }
+            /// Simular delay artificial
+                        if (val % 2 == 0) {
+                          auto delay = 100 + (val * 10);
+                          qDebug() << "pausa de " << delay << "ms";
+                          QThread::msleep(delay);
+                          qDebug() << "respondiendo "<< val << " despues de "
+                          << delay << "ms";
+                        }
 
             return QHttpServerResponse(parsedDocument.object(),
                                        QHttpServerResponder::StatusCode::Ok);
@@ -238,13 +169,19 @@ void handleVentaCredito(QHttpServer &httpServer,
     if (!json)
       return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
 
-    auto malformed = makeErrorResponse(
-        "Solicitud mal formada", "Solicitud contiene datos mal formados", 401);
-    return QHttpServerResponse(malformed,
-                               QHttpServerResponder::StatusCode::BadRequest);
+//    auto malformed = makeErrorResponse(
+//        "Solicitud mal formada", "Solicitud contiene datos mal formados", 401);
+//    return QHttpServerResponse(malformed,
+//                               QHttpServerResponder::StatusCode::BadRequest);
 
     /// CONTINUAR ACA
     auto payload = json.value();
+
+    qDebug().noquote().nospace()
+        << request.url().toDisplayString(QUrl::RemoveQuery) << "\n"
+        << QJsonDocument(payload).toJson(QJsonDocument::JsonFormat::Indented)
+        << "\n";
+
     return QHttpServerResponse(payload, QHttpServerResponder::StatusCode::Ok);
   });
 }
@@ -258,13 +195,19 @@ void handleVentaDebito(QHttpServer &httpServer,
     if (!json)
       return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
 
-    auto malformed = makeErrorResponse(
-        "Solicitud mal formada", "Solicitud contiene datos mal formados", 401);
-    return QHttpServerResponse(malformed,
-                               QHttpServerResponder::StatusCode::BadRequest);
+//    auto malformed = makeErrorResponse(
+//        "Solicitud mal formada", "Solicitud contiene datos mal formados", 401);
+//    return QHttpServerResponse(malformed,
+//                               QHttpServerResponder::StatusCode::BadRequest);
 
     /// CONTINUAR ACA
     auto payload = json.value();
+
+    qDebug().noquote().nospace()
+        << request.url().toDisplayString(QUrl::RemoveQuery) << "\n"
+        << QJsonDocument(payload).toJson(QJsonDocument::JsonFormat::Indented)
+        << "\n";
+
     return QHttpServerResponse(payload, QHttpServerResponder::StatusCode::Ok);
   });
 }
@@ -279,13 +222,19 @@ void handleMontoDescuento(QHttpServer &httpServer,
     if (!json)
       return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
 
-    auto malformed = makeErrorResponse(
-        "Solicitud mal formada", "Solicitud contiene datos mal formados", 401);
-    return QHttpServerResponse(malformed,
-                               QHttpServerResponder::StatusCode::BadRequest);
+//    auto malformed = makeErrorResponse(
+//        "Solicitud mal formada", "Solicitud contiene datos mal formados", 401);
+//    return QHttpServerResponse(malformed,
+//                               QHttpServerResponder::StatusCode::BadRequest);
 
     /// CONTINUAR ACA
     auto payload = json.value();
+
+    qDebug().noquote().nospace()
+        << request.url().toDisplayString(QUrl::RemoveQuery) << "\n"
+        << QJsonDocument(payload).toJson(QJsonDocument::JsonFormat::Indented)
+        << "\n";
+
     return QHttpServerResponse(payload, QHttpServerResponder::StatusCode::Ok);
   });
 }
@@ -299,13 +248,19 @@ void handleVentaQr(QHttpServer &httpServer, QHttpServerRequest::Method method,
     if (!json)
       return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
 
-    auto malformed = makeErrorResponse(
-        "Solicitud mal formada", "Solicitud contiene datos mal formados", 401);
-    return QHttpServerResponse(malformed,
-                               QHttpServerResponder::StatusCode::BadRequest);
+//    auto malformed = makeErrorResponse(
+//        "Solicitud mal formada", "Solicitud contiene datos mal formados", 401);
+//    return QHttpServerResponse(malformed,
+//                               QHttpServerResponder::StatusCode::BadRequest);
 
     /// CONTINUAR ACA
     auto payload = json.value();
+
+    qDebug().noquote().nospace()
+        << request.url().toDisplayString(QUrl::RemoveQuery) << "\n"
+        << QJsonDocument(payload).toJson(QJsonDocument::JsonFormat::Indented)
+        << "\n";
+
     return QHttpServerResponse(payload, QHttpServerResponder::StatusCode::Ok);
   });
 }
@@ -320,13 +275,19 @@ void handleVentaCanje(QHttpServer &httpServer,
     if (!json)
       return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
 
-    auto malformed = makeErrorResponse(
-        "Solicitud mal formada", "Solicitud contiene datos mal formados", 401);
-    return QHttpServerResponse(malformed,
-                               QHttpServerResponder::StatusCode::BadRequest);
+//    auto malformed = makeErrorResponse(
+//        "Solicitud mal formada", "Solicitud contiene datos mal formados", 401);
+//    return QHttpServerResponse(malformed,
+//                               QHttpServerResponder::StatusCode::BadRequest);
 
     /// CONTINUAR ACA
     auto payload = json.value();
+
+    qDebug().noquote().nospace()
+        << request.url().toDisplayString(QUrl::RemoveQuery) << "\n"
+        << QJsonDocument(payload).toJson(QJsonDocument::JsonFormat::Indented)
+        << "\n";
+
     return QHttpServerResponse(payload, QHttpServerResponder::StatusCode::Ok);
   });
 }
@@ -341,13 +302,19 @@ void handleVentaBilletera(QHttpServer &httpServer,
     if (!json)
       return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
 
-    auto malformed = makeErrorResponse(
-        "Solicitud mal formada", "Solicitud contiene datos mal formados", 401);
-    return QHttpServerResponse(malformed,
-                               QHttpServerResponder::StatusCode::BadRequest);
+//    auto malformed = makeErrorResponse(
+//        "Solicitud mal formada", "Solicitud contiene datos mal formados", 401);
+//    return QHttpServerResponse(malformed,
+//                               QHttpServerResponder::StatusCode::BadRequest);
 
     /// CONTINUAR ACA
     auto payload = json.value();
+
+    qDebug().noquote().nospace()
+        << request.url().toDisplayString(QUrl::RemoveQuery) << "\n"
+        << QJsonDocument(payload).toJson(QJsonDocument::JsonFormat::Indented)
+        << "\n";
+
     return QHttpServerResponse(payload, QHttpServerResponder::StatusCode::Ok);
   });
 }
@@ -465,3 +432,80 @@ int main(int argc, char *argv[]) {
 
   return a.exec();
 }
+
+
+
+/*
+
+
+void ejemplos(QHttpServer &httpServer) {
+
+  httpServer.route("/", []() { return "Hello world"; });
+
+  httpServer.route("/query", [](const QHttpServerRequest &request) {
+    return host(request) + u"/query/"_s;
+  });
+
+  httpServer.route("/query/", [](qint32 id, const QHttpServerRequest &request) {
+    return u"%1/query/%2"_s.arg(host(request)).arg(id);
+  });
+
+  httpServer.route("/query/<arg>/log",
+                   [](qint32 id, const QHttpServerRequest &request) {
+                     return u"%1/query/%2/log"_s.arg(host(request)).arg(id);
+                   });
+
+  httpServer.route("/query/<arg>/log/", [](qint32 id, float threshold,
+                                           const QHttpServerRequest &request) {
+    return u"%1/query/%2/log/%3"_s.arg(host(request)).arg(id).arg(threshold);
+  });
+
+  httpServer.route("/user/", [](const qint32 id) {
+    return u"User "_s + QString::number(id);
+  });
+
+  httpServer.route("/user/<arg>/detail",
+                   [](const qint32 id) { return u"User %1 detail"_s.arg(id); });
+
+  httpServer.route("/user/<arg>/detail/",
+                   [](const qint32 id, const qint32 year) {
+                     return u"User %1 detail year - %2"_s.arg(id).arg(year);
+                   });
+
+  httpServer.route("/json/", [] {
+    return QJsonObject{{{"key1", "1"}, {"key2", "2"}, {"key3", "3"}}};
+  });
+
+  httpServer.route("/assets/<arg>", [](const QUrl &url) {
+    return QHttpServerResponse::fromFile(u":/assets/"_s + url.path());
+  });
+
+  httpServer.route("/remote_address", [](const QHttpServerRequest &request) {
+    return request.remoteAddress().toString();
+  });
+
+  // Basic authentication example (RFC 7617)
+  httpServer.route("/auth", [](const QHttpServerRequest &request) {
+    auto auth = request.value("authorization").simplified();
+
+    if (auth.size() > 6 && auth.first(6).toLower() == "basic ") {
+      auto token = auth.sliced(6);
+      auto userPass = QByteArray::fromBase64(token);
+
+      if (auto colon = userPass.indexOf(':'); colon > 0) {
+        auto userId = userPass.first(colon);
+        auto password = userPass.sliced(colon + 1);
+
+        if (userId == "dschulz" && password == "dsds")
+          return QHttpServerResponse("text/plain", "Success\n");
+      }
+    }
+    QHttpServerResponse response("text/plain", "Authentication required\n",
+                                 QHttpServerResponse::StatusCode::Unauthorized);
+    response.setHeader("WWW-Authenticate",
+                       R"(Basic realm="SimuladorPOS", charset="UTF-8")");
+    return response;
+  });
+}
+
+*/
