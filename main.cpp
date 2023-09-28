@@ -9,8 +9,25 @@
 #include <QJsonObject>
 #include <QString>
 #include <QtHttpServer/QHttpServerResponse>
+#include <QRandomGenerator>
+
 
 using namespace Qt::StringLiterals;
+
+namespace util {
+int randomInt(int lbound, int hbound) {
+  QRandomGenerator *rng = QRandomGenerator::global();
+
+  return rng->bounded(lbound, hbound);
+}
+
+quint64 randomLong(quint64 lbound, quint64 hbound) {
+  QRandomGenerator *rng = QRandomGenerator::global();
+
+  return rng->bounded(lbound, hbound);
+}
+
+} // namespace util
 
 namespace endpoint {
 
@@ -31,15 +48,17 @@ static constexpr auto listarBilleteras = "/billeteras/";
 namespace server {
 
 static constexpr auto default_address = "localhost";
-static constexpr auto default_port = "3000";
+static constexpr auto default_port = 3000;
 
 QUrl formatUrl(const QString &route, const QString &ip = default_address,
-               const QString &port = default_port) noexcept {
+               int port = default_port) noexcept {
   static const auto fmt = QString{"http://%1:%2/%3"};
-  return fmt.arg(ip, port, route);
+    return fmt.arg(ip, QString::number(port), route);
 }
 
 } // namespace server
+
+
 
 static const QHttpServerRequest::Method POST = QHttpServerRequest::Method::Post;
 static const QHttpServerRequest::Method GET = QHttpServerRequest::Method::Get;
@@ -56,8 +75,9 @@ static std::optional<QJsonObject> byteArrayToJsonObject(const QByteArray &arr) {
   return json.object();
 }
 
-static QJsonObject makeErrorResponse(const QString error, const QString message,
-                                     qint16 statusCode) {
+static QJsonObject makeErrorResponse(const QString error,
+                                     const QString message,
+                                     int statusCode) {
   return QJsonObject{
       {"statusCode", statusCode}, {"error", error}, {"message", message}};
 }
@@ -150,12 +170,16 @@ void handleVentaUx(QHttpServer &httpServer, QHttpServerRequest::Method method,
     /// CONTINUAR ACA
     auto payload = json.value();
 
+    QJsonObject nsuBin;
+    nsuBin["nsu"]= util::randomInt(1,9999999);
+    nsuBin["bin"]= util::randomInt(1,999999);
+
     qDebug().noquote().nospace()
         << request.url().toDisplayString(QUrl::RemoveQuery) << "\n"
         << QJsonDocument(payload).toJson(QJsonDocument::JsonFormat::Indented)
-        << "\n";
+        << "=> \n" << QJsonDocument(nsuBin).toJson(QJsonDocument::Indented) << "\n";
 
-    return QHttpServerResponse(payload, QHttpServerResponder::StatusCode::Ok);
+    return QHttpServerResponse(nsuBin, QHttpServerResponder::StatusCode::Ok);
   });
 }
 
@@ -165,24 +189,68 @@ void handleVentaCredito(QHttpServer &httpServer,
   httpServer.route(path, method, [](const QHttpServerRequest &request) {
     const std::optional<QJsonObject> json =
         byteArrayToJsonObject(request.body());
+      auto status =  QHttpServerResponder::StatusCode::Ok;
 
-    if (!json)
-      return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
+      if (!json){
+          status =  QHttpServerResponder::StatusCode::BadRequest;
+          auto eResp = makeErrorResponse("Bad request", "JSON inválido", (int) status);
 
-//    auto malformed = makeErrorResponse(
-//        "Solicitud mal formada", "Solicitud contiene datos mal formados", 401);
-//    return QHttpServerResponse(malformed,
-//                               QHttpServerResponder::StatusCode::BadRequest);
+          qDebug().noquote().nospace()
+              << request.url().toDisplayString(QUrl::RemoveQuery) << " <==\n"
+              << request.body() << Qt::endl
+              << "==> [" << (int)status << "]\n"
+              << QJsonDocument(eResp).toJson(QJsonDocument::Indented) << "\n";
 
-    /// CONTINUAR ACA
-    auto payload = json.value();
+          return QHttpServerResponse(eResp, status);
+      }
 
-    qDebug().noquote().nospace()
-        << request.url().toDisplayString(QUrl::RemoveQuery) << "\n"
-        << QJsonDocument(payload).toJson(QJsonDocument::JsonFormat::Indented)
-        << "\n";
 
-    return QHttpServerResponse(payload, QHttpServerResponder::StatusCode::Ok);
+      auto req = json.value();
+
+      auto facturaNro = req.value("facturaNro").toInteger();
+      auto cuotas = req.value("cuotas").toInt();
+      auto plan = req.value("plan").toInt();
+
+      if ( facturaNro < 1 || facturaNro > 99999999999) {
+          status =  QHttpServerResponder::StatusCode::NotAcceptable;
+          auto eResp =
+              makeErrorResponse("Bad request", "Número de factura inválido", (int) status);
+
+              qDebug().noquote().nospace()
+              << request.url().toDisplayString(QUrl::RemoveQuery) << " <==\n"
+              << QJsonDocument(req).toJson(QJsonDocument::JsonFormat::Indented)
+              << "==> [" << (int) status << "]\n"
+              << QJsonDocument(eResp).toJson(QJsonDocument::Indented) << "\n";
+
+          return QHttpServerResponse(eResp, status);
+      }
+
+      if ( cuotas <0 || cuotas>99 || plan<0 || plan>1) {
+          status =  QHttpServerResponder::StatusCode::NotAcceptable;
+          auto eResp =
+              makeErrorResponse("Bad request", "Combinación inválida de Cuotas/Plan", (int) status);
+
+              qDebug().noquote().nospace()
+              << request.url().toDisplayString(QUrl::RemoveQuery) << " <==\n"
+              << QJsonDocument(req).toJson(QJsonDocument::JsonFormat::Indented)
+              << "==> [" << (int) status << "]\n"
+              << QJsonDocument(eResp).toJson(QJsonDocument::Indented) << "\n";
+
+          return QHttpServerResponse(eResp, status);
+      }
+
+
+      QJsonObject nsuBin;
+      nsuBin["nsu"] = util::randomInt(1, 9999999);
+      nsuBin["bin"] = util::randomInt(1, 999999);
+
+      qDebug().noquote().nospace()
+          << request.url().toDisplayString(QUrl::RemoveQuery) << " <==\n"
+          << QJsonDocument(req).toJson(QJsonDocument::JsonFormat::Indented)
+          << "==> [" << (int) status << "]\n" << QJsonDocument(nsuBin).toJson(QJsonDocument::Indented) << "\n";
+
+
+      return QHttpServerResponse(nsuBin, status);
   });
 }
 
@@ -191,24 +259,52 @@ void handleVentaDebito(QHttpServer &httpServer,
   httpServer.route(path, method, [](const QHttpServerRequest &request) {
     const std::optional<QJsonObject> json =
         byteArrayToJsonObject(request.body());
+      auto status =  QHttpServerResponder::StatusCode::Ok;
 
-    if (!json)
-      return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
+      if (!json){
+          status =  QHttpServerResponder::StatusCode::BadRequest;
+          auto eResp = makeErrorResponse("Bad request", "JSON inválido", (int) status);
 
-//    auto malformed = makeErrorResponse(
-//        "Solicitud mal formada", "Solicitud contiene datos mal formados", 401);
-//    return QHttpServerResponse(malformed,
-//                               QHttpServerResponder::StatusCode::BadRequest);
+          qDebug().noquote().nospace()
+              << request.url().toDisplayString(QUrl::RemoveQuery) << " <==\n"
+              << request.body() << Qt::endl
+              << "==> [" << (int)status << "]\n"
+              << QJsonDocument(eResp).toJson(QJsonDocument::Indented) << "\n";
 
-    /// CONTINUAR ACA
-    auto payload = json.value();
+          return QHttpServerResponse(eResp, status);
+      }
 
-    qDebug().noquote().nospace()
-        << request.url().toDisplayString(QUrl::RemoveQuery) << "\n"
-        << QJsonDocument(payload).toJson(QJsonDocument::JsonFormat::Indented)
-        << "\n";
 
-    return QHttpServerResponse(payload, QHttpServerResponder::StatusCode::Ok);
+      auto req = json.value();
+
+      auto facturaNro = req.value("facturaNro").toInteger();
+
+      if ( facturaNro<1 || facturaNro > 99999999999) {
+          status =  QHttpServerResponder::StatusCode::NotAcceptable;
+          auto eResp =
+              makeErrorResponse("Bad request", "Número de factura inválido", (int) status);
+
+              qDebug().noquote().nospace()
+              << request.url().toDisplayString(QUrl::RemoveQuery) << " <==\n"
+              << QJsonDocument(req).toJson(QJsonDocument::JsonFormat::Indented)
+              << "==> [" << (int) status << "]\n"
+              << QJsonDocument(eResp).toJson(QJsonDocument::Indented) << "\n";
+
+          return QHttpServerResponse(eResp, status);
+      }
+
+
+      QJsonObject nsuBin;
+      nsuBin["nsu"] = util::randomInt(1, 9999999);
+      nsuBin["bin"] = util::randomInt(1, 999999);
+
+      qDebug().noquote().nospace()
+          << request.url().toDisplayString(QUrl::RemoveQuery) << " <==\n"
+          << QJsonDocument(req).toJson(QJsonDocument::JsonFormat::Indented)
+          << "==> [" << (int) status << "]\n" << QJsonDocument(nsuBin).toJson(QJsonDocument::Indented) << "\n";
+
+
+      return QHttpServerResponse(nsuBin, status);
   });
 }
 
@@ -219,23 +315,59 @@ void handleMontoDescuento(QHttpServer &httpServer,
     const std::optional<QJsonObject> json =
         byteArrayToJsonObject(request.body());
 
-    if (!json)
-      return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
+    auto status =  QHttpServerResponder::StatusCode::Ok;
 
-//    auto malformed = makeErrorResponse(
-//        "Solicitud mal formada", "Solicitud contiene datos mal formados", 401);
-//    return QHttpServerResponse(malformed,
-//                               QHttpServerResponder::StatusCode::BadRequest);
+    if (!json){
+      status =  QHttpServerResponder::StatusCode::BadRequest;
+        auto eResp = makeErrorResponse("Bad request", "JSON inválido", (int) status);
 
-    /// CONTINUAR ACA
-    auto payload = json.value();
+        qDebug().noquote().nospace()
+            << request.url().toDisplayString(QUrl::RemoveQuery) << " <==\n"
+            << request.body() << Qt::endl
+            << "==> [" << (int)status << "]\n"
+            << QJsonDocument(eResp).toJson(QJsonDocument::Indented) << "\n";
+
+        return QHttpServerResponse(eResp, status);
+    }
+
+    auto req = json.value();
+
+    auto nsu = req.value("nsu").toInteger();
+    auto bin = req.value("bin").toInteger();
+    auto monto = req.value("monto").toInteger();
+
+    if (nsu < 1 || bin < 1 || monto < 1) {
+        status =  QHttpServerResponder::StatusCode::NotAcceptable;
+        auto eResp =
+            makeErrorResponse("Bad request", "NSU o BIN o MONTO inválido", (int) status);
+
+        qDebug().noquote().nospace()
+            << request.url().toDisplayString(QUrl::RemoveQuery) << " <==\n"
+            << QJsonDocument(req).toJson(QJsonDocument::JsonFormat::Indented)
+            << "==> [" << (int) status << "]\n"
+            << QJsonDocument(eResp).toJson(QJsonDocument::Indented) << "\n";
+
+        return QHttpServerResponse(eResp, status);
+    }
+
+    QJsonObject resp;
+    resp["codigoAutorizacion"] = QString::number(util::randomInt(1,999999));
+    resp["codigoComercio"] = QString::number(util::randomLong(1,9999999999));
+    resp["issuerId"] = "ZZ";
+    resp["mensajeDisplay"] = "APROBADA";
+    resp["montoVuelto"] = 0;
+    resp["saldo"] = 0;
+    resp["nombreCliente"] = "AAAAAAAAAA BBBBBBBBBB CCCCCCCCCC";
+    resp["pan"] = 1234;
+    resp["nombreTarjeta"] = "VISA CULO";
+    resp["nroBoleta"] = QString::number(util::randomLong(1,9999999999));
 
     qDebug().noquote().nospace()
-        << request.url().toDisplayString(QUrl::RemoveQuery) << "\n"
-        << QJsonDocument(payload).toJson(QJsonDocument::JsonFormat::Indented)
-        << "\n";
+        << request.url().toDisplayString(QUrl::RemoveQuery) << " <==\n"
+        << QJsonDocument(resp).toJson(QJsonDocument::JsonFormat::Indented)
+        << "==> [" << (int) status << "]\n" << QJsonDocument(resp).toJson(QJsonDocument::Indented) << "\n";
 
-    return QHttpServerResponse(payload, QHttpServerResponder::StatusCode::Ok);
+    return QHttpServerResponse(resp, status);
   });
 }
 
