@@ -39,13 +39,13 @@ quint64 randomLong(quint64 lbound, quint64 hbound) {
 namespace endpoint {
 
 static constexpr auto eco = "/pos/eco";
-static constexpr auto ventaUx = "/pos/venta-ux";               /// PEND
-static constexpr auto credito = "/pos/venta/credito";          /// PEND
-static constexpr auto debito = "/pos/venta/debito";            /// PEND
-static constexpr auto descuento = "/pos/descuento";            /// PEND
-static constexpr auto ventaQr = "/pos/venta-qr";               /// PEND
-static constexpr auto ventaCanje = "/pos/venta-canje";         /// PEND
-static constexpr auto ventaBilletera = "/pos/venta-billetera"; /// PEND
+static constexpr auto ventaUx = "/pos/venta-ux";
+static constexpr auto credito = "/pos/venta/credito";
+static constexpr auto debito = "/pos/venta/debito";
+static constexpr auto descuento = "/pos/descuento";
+static constexpr auto ventaQr = "/pos/venta-qr";
+static constexpr auto ventaCanje = "/pos/venta-canje";
+static constexpr auto ventaBilletera = "/pos/venta-billetera";
 
 static constexpr auto listarIssuers = "/issuers/";
 static constexpr auto listarBilleteras = "/billeteras/";
@@ -67,8 +67,8 @@ QUrl formatUrl(const QString &route, const QString &ip = default_address,
 
 
 
-static const QHttpServerRequest::Method POST = QHttpServerRequest::Method::Post;
-static const QHttpServerRequest::Method GET = QHttpServerRequest::Method::Get;
+static const auto POST = QHttpServerRequest::Method::Post;
+static const auto GET = QHttpServerRequest::Method::Get;
 
 static inline QString host(const QHttpServerRequest &request) {
   return QString::fromLatin1(request.value("Host"));
@@ -127,13 +127,10 @@ void handleEco(QHttpServer &httpServer, QHttpServerRequest::Method method,
           if (val >= 0 && val < 100) {
 
             /// Simular delay artificial
-                        if (val % 2 == 0) {
-                          auto delay = 100 + (val * 10);
-                          util::delay(delay);
-                          qDebug().noquote().nospace()
-                              << "Respondiendo "<< val << " despues de "
-                          << delay << "ms";
-                        }
+            auto delay = 8; // 10 + (val * 10);
+            util::delay(delay);
+            qDebug().noquote().nospace()
+                << "Respondiendo " << val << " despues de " << delay << "ms";
 
             return QHttpServerResponse(parsedDocument.object(),
                                        QHttpServerResponder::StatusCode::Ok);
@@ -178,8 +175,8 @@ void handleVentaUx(QHttpServer &httpServer, QHttpServerRequest::Method method,
     auto payload = json.value();
 
     QJsonObject nsuBin;
-    nsuBin["nsu"]= util::randomInt(1,9999999);
-    nsuBin["bin"]= util::randomInt(1,999999);
+    nsuBin["nsu"] = "UX"+QString::number(util::randomInt(1, 9999999));
+    nsuBin["bin"] = "UX"+QString::number(util::randomInt(1, 999999));
 
     qDebug().noquote().nospace()
         << request.url().toDisplayString(QUrl::RemoveQuery) << "\n"
@@ -255,8 +252,8 @@ void handleVentaCredito(QHttpServer &httpServer,
 
 
       QJsonObject nsuBin;
-      nsuBin["nsu"] = util::randomInt(1, 9999999);
-      nsuBin["bin"] = util::randomInt(1, 999999);
+      nsuBin["nsu"] = QString::number(util::randomInt(1, 9999999));
+      nsuBin["bin"] = QString::number(util::randomInt(1, 999999));
 
       qDebug().noquote().nospace()
           << request.url().toDisplayString(QUrl::RemoveQuery) << " <==\n"
@@ -309,8 +306,8 @@ void handleVentaDebito(QHttpServer &httpServer,
 
 
       QJsonObject nsuBin;
-      nsuBin["nsu"] = util::randomInt(1, 9999999);
-      nsuBin["bin"] = util::randomInt(1, 999999);
+      nsuBin["nsu"] = QString::number(util::randomInt(1, 9999999));
+      nsuBin["bin"] = QString::number(util::randomInt(1, 999999));
 
       qDebug().noquote().nospace()
           << request.url().toDisplayString(QUrl::RemoveQuery) << " <==\n"
@@ -346,11 +343,11 @@ void handleMontoDescuento(QHttpServer &httpServer,
 
     auto req = json.value();
 
-    auto nsu = req.value("nsu").toInteger();
-    auto bin = req.value("bin").toInteger();
+    auto nsu = req.value("nsu").toString();
+    auto bin = req.value("bin").toString();
     auto monto = req.value("monto").toInteger();
 
-    if (nsu < 1 || bin < 1 || monto < 1) {
+    if (nsu.trimmed().isEmpty()|| bin.trimmed().isEmpty() || monto < 1) {
         status =  QHttpServerResponder::StatusCode::NotAcceptable;
         auto eResp =
             makeErrorResponse("Bad request", "NSU o BIN o MONTO inválido", (int) status);
@@ -388,7 +385,7 @@ void handleMontoDescuento(QHttpServer &httpServer,
     resp["codigoComercio"] = QString::number(util::randomLong(1,9999999999));
     resp["issuerId"] = "ZZ";
     resp["mensajeDisplay"] = "APROBADA";
-    resp["montoVuelto"] = 0;
+    resp["montoVuelto"] = util::randomInt(0, 500000);
     resp["saldo"] = util::randomInt(1, 500000000);
     resp["nombreCliente"] = "Nombre de Alguien";
     resp["pan"] = util::randomInt(1,9999);
@@ -469,7 +466,7 @@ void handleVentaQr(QHttpServer &httpServer, QHttpServerRequest::Method method,
       resp["codigoComercio"] = QString::number(util::randomLong(1,9999999999));
       resp["issuerId"] = "ZZ";
       resp["mensajeDisplay"] = "APROBADA (QR)";
-      resp["montoVuelto"] = 0;
+      resp["montoVuelto"] = util::randomInt(0, 500000);
       resp["saldo"] = util::randomInt(1, 500000000);
       resp["nombreCliente"] = "Nombre de Alguien";
       resp["pan"] = util::randomInt(1,9999);
@@ -550,7 +547,7 @@ void handleVentaCanje(QHttpServer &httpServer,
       resp["codigoComercio"] = QString::number(util::randomLong(1,9999999999));
       resp["issuerId"] = "ZZ";
       resp["mensajeDisplay"] = "APROBADA (CANJE)";
-      resp["montoVuelto"] = 0;
+      resp["montoVuelto"] = util::randomInt(0, 500000);
       resp["saldo"] = util::randomInt(1, 500000000);
       resp["nombreCliente"] = "Nombre de Alguien";
       resp["pan"] = util::randomInt(1,9999);
@@ -631,7 +628,7 @@ void handleVentaBilletera(QHttpServer &httpServer,
       resp["codigoComercio"] = QString::number(util::randomLong(1,9999999999));
       resp["issuerId"] = "ZZ";
       resp["mensajeDisplay"] = "APROBADA (BILLETERA)";
-      resp["montoVuelto"] = 0;
+      resp["montoVuelto"] = util::randomInt(0, 500000);
       resp["saldo"] = util::randomInt(1, 500000000);
       resp["nombreCliente"] = "Nombre de Alguien";
       resp["pan"] = util::randomInt(1,9999);
