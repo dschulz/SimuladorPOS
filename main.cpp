@@ -214,7 +214,7 @@ void handleVentaCredito(QHttpServer &httpServer,
 
       auto req = json.value();
 
-      auto facturaNro = req.value("facturaNro").toInteger();
+      auto facturaNro = (req.value("facturaNro").toString()).toLongLong();
       auto cuotas = req.value("cuotas").toInt();
       auto plan = req.value("plan").toInt();
 
@@ -288,7 +288,7 @@ void handleVentaDebito(QHttpServer &httpServer,
 
       auto req = json.value();
 
-      auto facturaNro = req.value("facturaNro").toInteger();
+      auto facturaNro = (req.value("facturaNro").toString()).toLongLong();
 
       if ( facturaNro<1 || facturaNro > 99999999999) {
           status =  QHttpServerResponder::StatusCode::NotAcceptable;
@@ -425,7 +425,7 @@ void handleVentaQr(QHttpServer &httpServer, QHttpServerRequest::Method method,
 
       auto req = json.value();
 
-      auto facturaNro = req.value("facturaNro").toInteger();
+      auto facturaNro = (req.value("facturaNro").toString()).toLongLong();
       auto monto = req.value("monto").toInteger();
 
       if (monto < 10 || facturaNro < 10) {
@@ -506,7 +506,7 @@ void handleVentaCanje(QHttpServer &httpServer,
 
       auto req = json.value();
 
-      auto facturaNro = req.value("facturaNro").toInteger();
+      auto facturaNro = (req.value("facturaNro").toString()).toLongLong();
       auto monto = req.value("monto").toInteger();
 
       if (monto < 10 || facturaNro < 10) {
@@ -587,7 +587,7 @@ void handleVentaBilletera(QHttpServer &httpServer,
 
       auto req = json.value();
 
-      auto facturaNro = req.value("facturaNro").toInteger();
+      auto facturaNro = (req.value("facturaNro").toString()).toLongLong();
       auto monto = req.value("monto").toInteger();
 
       if (monto < 10 || facturaNro < 10) {
