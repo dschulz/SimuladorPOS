@@ -160,33 +160,74 @@ void handleVentaUx(QHttpServer &httpServer, QHttpServerRequest::Method method,
     const std::optional<QJsonObject> json =
         byteArrayToJsonObject(request.body());
 
+    auto status = QHttpServerResponder::StatusCode::Ok;
+
     if (!json)
       return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
 
-    /*
-    if(ventaUxInputInvalido(json.value()))
-    auto malformed = makeErrorResponse(
-        "Solicitud mal formada", "La solicitud contiene datos mal formados",
-    401); return QHttpServerResponse(malformed,
-                               QHttpServerResponder::StatusCode::BadRequest);
-    */
 
-    /// CONTINUAR ACA
-    auto payload = json.value();
+//    if(ventaUxInputInvalido(json.value())){
+//      auto malformed =
+//          makeErrorResponse("Solicitud mal formada",
+//                            "La solicitud contiene datos mal formados", 401);
+//      return QHttpServerResponse(malformed,
+//                               QHttpServerResponder::StatusCode::BadRequest);
+//    }
+
+
+    auto req = json.value();
+
+    auto facturaNro = req.value("facturaNro").toInteger();
+    auto cuotas = req.value("cuotas").toInt();
+    auto plan = req.value("plan").toInt();
+
+    qDebug().noquote() << "\n\nFactura Numero: " << facturaNro << "\n\n";
+
+    if (facturaNro < 1 || facturaNro > 99999999999) {
+      status = QHttpServerResponder::StatusCode::NotAcceptable;
+      auto eResp = makeErrorResponse("Bad request",
+                                     "Número de factura inválido", (int)status);
+
+      qDebug().noquote().nospace()
+          << request.url().toDisplayString(QUrl::RemoveQuery) << " <==\n"
+          << QJsonDocument(req).toJson(QJsonDocument::JsonFormat::Indented)
+          << "==> [" << (int)status << "]\n"
+          << QJsonDocument(eResp).toJson(QJsonDocument::Indented) << "\n";
+
+      return QHttpServerResponse(eResp, status);
+    }
+
+    if (cuotas < 0 || cuotas > 99 || plan < 0 || plan > 1) {
+      status = QHttpServerResponder::StatusCode::NotAcceptable;
+      auto eResp = makeErrorResponse(
+          "Bad request", "Combinación inválida de Cuotas/Plan", (int)status);
+
+      qDebug().noquote().nospace()
+          << request.url().toDisplayString(QUrl::RemoveQuery) << " <==\n"
+          << QJsonDocument(req).toJson(QJsonDocument::JsonFormat::Indented)
+          << "==> [" << (int)status << "]\n"
+          << QJsonDocument(eResp).toJson(QJsonDocument::Indented) << "\n";
+
+      return QHttpServerResponse(eResp, status);
+    }
+
+    auto delay = 1500;
+
+    util::delay(delay);
 
     QJsonObject nsuBin;
-    nsuBin["nsu"] = "UX"+QString::number(util::randomInt(1, 9999999));
-    nsuBin["bin"] = "UX"+QString::number(util::randomInt(1, 999999));
+    nsuBin["nsu"] = "UX" + QString::number(util::randomInt(1, 9999999));
+    nsuBin["bin"] = "UX" + QString::number(util::randomInt(1, 999999));
 
     qDebug().noquote().nospace()
         << request.url().toDisplayString(QUrl::RemoveQuery) << "\n"
-        << QJsonDocument(payload).toJson(QJsonDocument::JsonFormat::Indented)
-        << "=> \n" << QJsonDocument(nsuBin).toJson(QJsonDocument::Indented) << "\n";
-
+        << QJsonDocument(req).toJson(QJsonDocument::JsonFormat::Indented)
+        << "=> \n"
+        << QJsonDocument(nsuBin).toJson(QJsonDocument::Indented) << "\n";
 
     util::delay(1500);
 
-    return QHttpServerResponse(nsuBin, QHttpServerResponder::StatusCode::Ok);
+    return QHttpServerResponse(nsuBin, status);
   });
 }
 
@@ -214,7 +255,7 @@ void handleVentaCredito(QHttpServer &httpServer,
 
       auto req = json.value();
 
-      auto facturaNro = (req.value("facturaNro").toString()).toLongLong();
+      auto facturaNro = req.value("facturaNro").toInteger();
       auto cuotas = req.value("cuotas").toInt();
       auto plan = req.value("plan").toInt();
 
@@ -288,7 +329,7 @@ void handleVentaDebito(QHttpServer &httpServer,
 
       auto req = json.value();
 
-      auto facturaNro = (req.value("facturaNro").toString()).toLongLong();
+      auto facturaNro = req.value("facturaNro").toInteger();
 
       if ( facturaNro<1 || facturaNro > 99999999999) {
           status =  QHttpServerResponder::StatusCode::NotAcceptable;
@@ -425,7 +466,7 @@ void handleVentaQr(QHttpServer &httpServer, QHttpServerRequest::Method method,
 
       auto req = json.value();
 
-      auto facturaNro = (req.value("facturaNro").toString()).toLongLong();
+      auto facturaNro = req.value("facturaNro").toInteger();
       auto monto = req.value("monto").toInteger();
 
       if (monto < 10 || facturaNro < 10) {
@@ -506,7 +547,7 @@ void handleVentaCanje(QHttpServer &httpServer,
 
       auto req = json.value();
 
-      auto facturaNro = (req.value("facturaNro").toString()).toLongLong();
+      auto facturaNro = req.value("facturaNro").toInteger();
       auto monto = req.value("monto").toInteger();
 
       if (monto < 10 || facturaNro < 10) {
@@ -587,7 +628,7 @@ void handleVentaBilletera(QHttpServer &httpServer,
 
       auto req = json.value();
 
-      auto facturaNro = (req.value("facturaNro").toString()).toLongLong();
+      auto facturaNro = req.value("facturaNro").toInteger();
       auto monto = req.value("monto").toInteger();
 
       if (monto < 10 || facturaNro < 10) {
